@@ -14,6 +14,14 @@ class CreateDocumentRequest(BaseModel):
     content_markdown: str
     category: str = "Uncategorized"
 
+class DocumentResponse(BaseModel):
+    id: int
+    title: str
+    category: str | None
+    created_at: str | None = None
+    updated_at: str | None = None
+    content: str = ""
+
 # For now, we mock a default user since we don't have auth yet
 def get_current_user(session: Session = Depends(get_session)) -> User:
     user = session.exec(select(User).where(User.username == "default")).first()
@@ -24,7 +32,7 @@ def get_current_user(session: Session = Depends(get_session)) -> User:
         session.refresh(user)
     return user
 
-@router.get("/", response_model=List[Document])
+@router.get("/", response_model=List[DocumentResponse])
 def list_documents(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user)
@@ -35,7 +43,22 @@ def list_documents(
         .where(Document.owner_id == user.id)
         .order_by(Document.created_at.desc())
     ).all()
-    return docs
+    
+    result = []
+    for doc in docs:
+        content = ""
+        if doc.blocks:
+            content = doc.blocks[0].content
+        
+        result.append(DocumentResponse(
+            id=doc.id,
+            title=doc.title,
+            category=doc.category or "Uncategorized",
+            created_at=doc.created_at.isoformat() if doc.created_at else None,
+            updated_at=doc.updated_at.isoformat() if doc.updated_at else None,
+            content=content
+        ))
+    return result
 
 @router.post("/", response_model=Document)
 def create_document(

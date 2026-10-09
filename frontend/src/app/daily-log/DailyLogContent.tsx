@@ -49,10 +49,29 @@ export default function DailyLogContent() {
     mutationFn: async (vars: { content: string }) => {
       // 1. Send the raw thought to Gemini for structure
       const aiResponse = await processBrainDump(vars.content);
+      
+      const structuredContent = `## Summary
+${aiResponse.thought.summary}
+
+## Action Items
+${aiResponse.thought.action_items && aiResponse.thought.action_items.length > 0 
+  ? aiResponse.thought.action_items.map((item: string) => `- [ ] ${item}`).join('\n') 
+  : "None"}
+
+## Tags
+${aiResponse.thought.tags ? aiResponse.thought.tags.map((tag: string) => `#${tag}`).join(', ') : ""}
+
+## Category
+${aiResponse.thought.category}
+
+---
+**Original Thought:**
+${vars.content}`;
+
       // 2. Save the structure to our database
       return createDocument(
         aiResponse.thought.title,
-        vars.content, // save original markdown
+        structuredContent,
         aiResponse.thought.category
       );
     },
@@ -62,6 +81,9 @@ export default function DailyLogContent() {
       setHasContent(false);
       setSelectedMood(undefined);
     },
+    onError: (error: any) => {
+      alert(`Error processing your log: ${error.message || error}`);
+    }
   });
 
   const handleSubmit = useCallback(async () => {
@@ -131,7 +153,7 @@ export default function DailyLogContent() {
             return (
               <DailyLogEntry
                 key={doc.id}
-                content={`**${doc.title}**\n*(Saved to database)*`}
+                content={`**${doc.title}**\n\n${doc.content}`}
                 time={timeStr}
               />
             );

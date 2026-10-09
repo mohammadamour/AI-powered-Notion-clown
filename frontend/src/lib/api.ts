@@ -6,7 +6,7 @@
  * handles this gracefully by showing mock/local behavior.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 // ─── Types (mirror the backend Pydantic schemas) ─────────────────
 
@@ -62,6 +62,7 @@ export interface Document {
   category?: string;
   created_at: string;
   updated_at: string;
+  content: string;
 }
 
 export async function getDocuments(): Promise<Document[]> {
