@@ -86,25 +86,74 @@ def _mock_process(content: str) -> ProcessedThought:
     )
 
 
+import httpx
+import json
+
+async def _process_with_gemini(content: str) -> ProcessedThought:
+    """Generate structured thought using Gemini Pro REST API."""
+    api_key = settings.GEMINI_API_KEY
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY is not set.")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.LLM_MODEL}:generateContent?key={api_key}"
+
+    prompt = f"""You are an AI "Gardener" for a personal Second Brain app.
+The user will provide a raw, unstructured "brain dump". Your job is to extract meaning, categorize it, and find action items.
+
+You MUST respond with a raw JSON object and nothing else. Do not use Markdown code blocks (e.g. ```json). Just the raw JSON object.
+
+The JSON schema must be exactly this:
+{{
+  "title": "A short, catchy title (max 6 words)",
+  "summary": "A 1-2 sentence summary of the main point",
+  "tags": ["array", "of", "up", "to", "4", "relevant", "tags"],
+  "category": "One overarching category (e.g. Coding, Fitness, Philosophy, Work, Personal, etc)",
+  "action_items": ["Array of extracted action items", "Or empty if none"],
+  "connections": ["1 or 2 ideas on how this thought might connect to other concepts"]
+}}
+
+Here is the user's brain dump:
+"{content}"
+"""
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+        }
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload, timeout=30.0)
+        response.raise_for_status()
+        
+        data = response.json()
+        try:
+            text_response = data["candidates"][0]["content"]["parts"][0]["text"]
+            # Clean up potential markdown formatting
+            text_response = text_response.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(text_response)
+            return ProcessedThought(**parsed)
+        except (KeyError, json.JSONDecodeError) as e:
+            # Fallback to mock if parsing fails wildly
+            print(f"Gemini processing error: {e}")
+            return _mock_process(content)
+
 # ─── Public API ───────────────────────────────────────────────────
 
 async def process_brain_dump(request: BrainDumpRequest) -> ProcessResponse:
     """
     Process a raw brain dump into structured thought.
-
-    Currently uses mock logic. To enable real LLM processing:
-    - Set LLM_PROVIDER="openai" in .env
-    - Set LLM_API_KEY to your key
     """
-
     start = time.time()
 
-    if settings.LLM_PROVIDER == "mock":
-        thought = _mock_process(request.content)
+    if settings.LLM_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
+        try:
+            thought = await _process_with_gemini(request.content)
+        except Exception as e:
+            print(f"Error calling Gemini: {e}")
+            thought = _mock_process(request.content)
     else:
-        # Future: real LLM integration goes here
-        # from app.services.llm_client import process_with_llm
-        # thought = await process_with_llm(request.content)
         thought = _mock_process(request.content)
 
     elapsed_ms = (time.time() - start) * 1000

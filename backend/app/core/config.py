@@ -13,10 +13,10 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
 
-    # LLM Configuration (not used yet — ready for when you plug in)
-    LLM_PROVIDER: str = "mock"  # "openai", "anthropic", or "mock"
-    LLM_API_KEY: str = ""
-    LLM_MODEL: str = "gpt-4o-mini"
+    # LLM Configuration (ready for Gemini integration)
+    LLM_PROVIDER: str = "gemini"  # "gemini" or "mock"
+    GEMINI_API_KEY: str = ""
+    LLM_MODEL: str = "gemini-1.5-pro"
 
     class Config:
         env_file = ".env"
