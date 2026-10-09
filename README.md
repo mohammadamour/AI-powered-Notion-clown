@@ -102,3 +102,8 @@ DATABASE_URL="postgresql+pg8000://postgres:[password]@[pooler-host].supabase.com
 - [x] Add real LLM integration to the Gardener service (Gemini Pro).
 - [x] Add persistence (Supabase Postgres database layer).
 - [ ] Transition to **Phase 3: The Mind Tree & Infinite Canvas** - Build the visualization layer mapping out documents and tags visually using React Flow.
+- [ ] **Performance:** Improve AI processing speed (currently ~10s wait for structuring).
+- [ ] **UI/UX Revamp (Notion-like feel):** Expand the editor to use the full page instead of a small input box.
+- [ ] **Daily Log Workflow:** Consolidate entries by day, collapsing older entries into neat, navigable components at the bottom of the page.
+- [ ] **CRUD Operations:** Implement Edit and Delete functionality for documents and entries.
+- [ ] **Aesthetic AI Formatting:** Update Gemini prompts and rendering to beautify notes with rich formatting (headings, bold lines, italics) to resemble a premium Notion template.
