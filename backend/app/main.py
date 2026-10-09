@@ -1,13 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 from app.api.routes import health, brain
 from app.core.config import settings
+from app.core.db import init_db
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="AI-Powered Second Brain — Zero-friction personal knowledge base",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # CORS — allow the Next.js frontend to talk to us

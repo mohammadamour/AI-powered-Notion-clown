@@ -4,6 +4,9 @@ import { useState, useCallback, useEffect } from "react";
 import { Send } from "lucide-react";
 import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
 import { MOODS } from "@/lib/constants";
+import { useCreateBlockNote } from "@blocknote/react";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/mantine/style.css";
 
 interface LogEntry {
   id: string;
@@ -39,8 +42,17 @@ const SAMPLE_ENTRIES: LogEntry[] = [
 
 export default function DailyLogPage() {
   const [entries, setEntries] = useState<LogEntry[]>(SAMPLE_ENTRIES);
-  const [newContent, setNewContent] = useState("");
   const [selectedMood, setSelectedMood] = useState<string | undefined>();
+  const [hasContent, setHasContent] = useState(false);
+
+  const editor = useCreateBlockNote();
+
+  const handleChange = useCallback(() => {
+    // Check if the editor has meaningful text (more than just an empty paragraph)
+    const blocks = editor.document;
+    const text = blocks.map((b) => ('content' in b ? b.content : "")).toString().trim();
+    setHasContent(blocks.length > 1 || text.length > 0);
+  }, [editor]);
 
   const [today, setToday] = useState("");
 
@@ -58,8 +70,10 @@ export default function DailyLogPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!newContent.trim()) return;
+  const handleSubmit = useCallback(async () => {
+    if (!hasContent) return;
+
+    const markdown = await editor.blocksToMarkdownLossy(editor.document);
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString("en-US", {
@@ -70,22 +84,16 @@ export default function DailyLogPage() {
 
     const entry: LogEntry = {
       id: Date.now().toString(),
-      content: newContent.trim(),
+      content: markdown.trim(),
       mood: selectedMood,
       time: timeStr,
     };
 
     setEntries((prev) => [entry, ...prev]);
-    setNewContent("");
+    editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
+    setHasContent(false);
     setSelectedMood(undefined);
-  }, [newContent, selectedMood]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
+  }, [hasContent, editor, selectedMood]);
 
   return (
     <div className="page-container">
@@ -96,19 +104,11 @@ export default function DailyLogPage() {
           Dump your thoughts below. No structure needed — just write.
         </p>
       </div>
-
       {/* Input Section */}
-      <div className="daily-log-input-section">
-        <textarea
-          className="daily-log-textarea"
-          placeholder="What's going through your mind right now? Just start typing..."
-          value={newContent}
-          onChange={(e) => setNewContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          id="daily-log-textarea"
-        />
+      <div className="daily-log-input-section" style={{ background: "var(--color-bg-secondary)", borderRadius: "var(--radius-md)", padding: "16px", border: "1px solid var(--color-surface-border)" }}>
+        <BlockNoteView editor={editor} theme="dark" onChange={handleChange} />
 
-        <div className="daily-log-controls">
+        <div className="daily-log-controls" style={{ marginTop: "16px" }}>
           {/* Mood Picker */}
           <div className="mood-picker">
             {MOODS.map(({ emoji, label }) => (
@@ -129,7 +129,7 @@ export default function DailyLogPage() {
           <button
             className="btn-primary"
             onClick={handleSubmit}
-            disabled={!newContent.trim()}
+            disabled={!hasContent}
             id="daily-log-submit"
           >
             <Send size={14} />
