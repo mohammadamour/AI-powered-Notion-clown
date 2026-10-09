@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     LLM_MODEL: str = "gemini-1.5-pro"
 
+    # Database Configuration
+    DATABASE_URL: str = "sqlite:///./second_brain.db"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
