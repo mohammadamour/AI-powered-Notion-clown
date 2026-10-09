@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Send } from "lucide-react";
 import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
 import { MOODS } from "@/lib/constants";
@@ -42,12 +42,18 @@ export default function DailyLogPage() {
   const [newContent, setNewContent] = useState("");
   const [selectedMood, setSelectedMood] = useState<string | undefined>();
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const [today, setToday] = useState("");
+
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    );
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (!newContent.trim()) return;
