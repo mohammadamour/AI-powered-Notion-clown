@@ -55,3 +55,34 @@ export async function processBrainDump(
   }
   return res.json();
 }
+
+export interface Document {
+  id: number;
+  title: string;
+  category?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getDocuments(): Promise<Document[]> {
+  const res = await fetch(`${API_BASE}/api/documents`);
+  if (!res.ok) throw new Error(`Fetching documents failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createDocument(
+  title: string,
+  content_markdown: string,
+  category: string = "Uncategorized"
+): Promise<Document> {
+  const url = new URL(`${API_BASE}/api/documents`);
+  url.searchParams.append("title", title);
+  url.searchParams.append("content_markdown", content_markdown);
+  url.searchParams.append("category", category);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`Creating document failed: ${res.status}`);
+  return res.json();
+}

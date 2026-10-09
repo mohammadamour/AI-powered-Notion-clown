@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api.routes import health, brain
+from app.api.routes import health, brain, documents
 from app.core.config import settings
 from app.core.db import init_db
 
@@ -30,6 +30,7 @@ app.add_middleware(
 # Mount route modules
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(brain.router, prefix="/api/brain", tags=["Brain"])
+app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 
 
 @app.get("/")

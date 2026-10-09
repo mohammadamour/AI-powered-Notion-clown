@@ -7,6 +7,8 @@ import { MOODS } from "@/lib/constants";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDocuments, createDocument } from "@/lib/api";
 
 interface LogEntry {
   id: string;
@@ -41,7 +43,12 @@ const SAMPLE_ENTRIES: LogEntry[] = [
 ];
 
 export default function DailyLogPage() {
-  const [entries, setEntries] = useState<LogEntry[]>(SAMPLE_ENTRIES);
+  const queryClient = useQueryClient();
+  
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ["documents"],
+    queryFn: getDocuments,
+  });
   const [selectedMood, setSelectedMood] = useState<string | undefined>();
   const [hasContent, setHasContent] = useState(false);
 
@@ -70,30 +77,25 @@ export default function DailyLogPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  const mutation = useMutation({
+    mutationFn: (vars: { title: string; content: string }) =>
+      createDocument(vars.title, vars.content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
+      setHasContent(false);
+      setSelectedMood(undefined);
+    },
+  });
+
   const handleSubmit = useCallback(async () => {
-    if (!hasContent) return;
+    if (!hasContent || mutation.isPending) return;
 
     const markdown = await editor.blocksToMarkdownLossy(editor.document);
+    const title = markdown.split("\n")[0].substring(0, 40) || "Brain Dump";
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-    const entry: LogEntry = {
-      id: Date.now().toString(),
-      content: markdown.trim(),
-      mood: selectedMood,
-      time: timeStr,
-    };
-
-    setEntries((prev) => [entry, ...prev]);
-    editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
-    setHasContent(false);
-    setSelectedMood(undefined);
-  }, [hasContent, editor, selectedMood]);
+    mutation.mutate({ title, content: markdown });
+  }, [hasContent, editor, mutation]);
 
   return (
     <div className="page-container">
@@ -129,30 +131,40 @@ export default function DailyLogPage() {
           <button
             className="btn-primary"
             onClick={handleSubmit}
-            disabled={!hasContent}
+            disabled={!hasContent || mutation.isPending}
             id="daily-log-submit"
           >
             <Send size={14} />
-            Log it
+            {mutation.isPending ? "Saving..." : "Log it"}
           </button>
         </div>
       </div>
 
       {/* Entries */}
-      {entries.length > 0 && (
+      {isLoading ? (
+        <p className="daily-log-subtitle" style={{ marginTop: "32px" }}>Loading entries...</p>
+      ) : documents.length > 0 ? (
         <div className="daily-log-entries">
           <h3 className="daily-log-entries-title">
-            Today&apos;s Entries ({entries.length})
+            Your Documents ({documents.length})
           </h3>
-          {entries.map((entry) => (
-            <DailyLogEntry
-              key={entry.id}
-              content={entry.content}
-              mood={entry.mood}
-              time={entry.time}
-            />
-          ))}
+          {documents.map((doc) => {
+            const timeStr = new Date(doc.created_at).toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            });
+            return (
+              <DailyLogEntry
+                key={doc.id}
+                content={`**${doc.title}**\n*(Saved to database)*`}
+                time={timeStr}
+              />
+            );
+          })}
         </div>
+      ) : (
+        <p className="daily-log-subtitle" style={{ marginTop: "32px" }}>No documents yet.</p>
       )}
     </div>
   );
