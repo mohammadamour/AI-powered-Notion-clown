@@ -14,21 +14,24 @@ npm run dev
 ```
 
 ### Backend (FastAPI)
+**Note:** Ensure you are using a stable Python 3.12+ environment, as some dependencies like `pydantic-core` require native compilation that may fail in environments like Mingw/MSYS2.
+
 ```bash
 cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m venv venv
+# On Windows PowerShell: .\venv\Scripts\Activate.ps1
+# On Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt pg8000
+python -m uvicorn app.main:app --reload --port 8000
 # → http://localhost:8000
 # → API Docs: http://localhost:8000/docs
 ```
 
-> **Note:** The frontend works independently — if the backend isn't running, the Omnibox falls back to local capture mode.
-
 ## Tech Stack
-- **Frontend:** Next.js 15 (App Router), TypeScript, React Flow (`@xyflow/react`), Lucide icons, Vanilla CSS
-- **Editor:** Exploring BlockNote or TipTap for a native, lightweight Notion-style block editor experience without the bloat of forking a massive mono-repo.
-- **Backend/AI:** Python (FastAPI), handling LangChain/LlamaIndex logic, vector embeddings, and LLM integrations.
-- **Database:** A Vector Database (e.g., Pinecone, ChromaDB) for semantic search, plus a standard DB for user metadata.
+- **Frontend:** Next.js 15 (App Router), TypeScript, React, React Flow (`@xyflow/react`), TanStack Query, Vanilla CSS
+- **Editor:** BlockNote (`@blocknote/react`) for a native, lightweight Notion-style block editor experience.
+- **Backend/AI:** Python (FastAPI), Google Gemini Pro API via `httpx`.
+- **Database:** Supabase (PostgreSQL) integrated via `pg8000` (pure-python driver) and SQLModel (SQLAlchemy).
 
 ## Project Structure
 ```
@@ -81,16 +84,21 @@ It doesn't just store information; it actively helps create things from it. Spen
 | `Esc` | Close modal / palette |
 
 ## Configuration
-Copy the example env file and configure as needed:
+Set up your `.env` file in the `backend` directory:
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Set `LLM_PROVIDER` to `openai` or `anthropic` and provide your API key when ready to enable real AI processing.
+Ensure your `.env` contains:
+```env
+GEMINI_API_KEY="your-gemini-api-key"
+DATABASE_URL="postgresql+pg8000://postgres:[password]@[pooler-host].supabase.com:5432/postgres"
+```
+*(Note: If using Supabase and an IPv4 network, you must use the Session Pooler URL, not the direct connection URL).*
 
-## Next Steps
-- [ ] Finalize the decision on how the AI routes Daily Logs to the Mind Tree (Auto vs. Manual).
-- [ ] Integrate a rich text editor (BlockNote or TipTap) into the Daily Log.
-- [ ] Finalize architectural choices (DB, specific LLM models).
-- [ ] Add real LLM integration to the Gardener service.
-- [ ] Add persistence (database layer).
+## Progress & Next Steps
+- [x] Finalize architectural choices (Supabase, Gemini Pro, SQLModel).
+- [x] Integrate a rich text editor (BlockNote) into the Daily Log (Client-side rendering).
+- [x] Add real LLM integration to the Gardener service (Gemini Pro).
+- [x] Add persistence (Supabase Postgres database layer).
+- [ ] Transition to **Phase 3: The Mind Tree & Infinite Canvas** - Build the visualization layer mapping out documents and tags visually using React Flow.

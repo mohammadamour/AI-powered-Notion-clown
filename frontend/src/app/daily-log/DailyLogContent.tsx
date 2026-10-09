@@ -8,7 +8,7 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDocuments, createDocument } from "@/lib/api";
+import { getDocuments, createDocument, processBrainDump } from "@/lib/api";
 
 export default function DailyLogContent() {
   const queryClient = useQueryClient();
@@ -46,8 +46,16 @@ export default function DailyLogContent() {
   }, []);
 
   const mutation = useMutation({
-    mutationFn: (vars: { title: string; content: string }) =>
-      createDocument(vars.title, vars.content),
+    mutationFn: async (vars: { content: string }) => {
+      // 1. Send the raw thought to Gemini for structure
+      const aiResponse = await processBrainDump(vars.content);
+      // 2. Save the structure to our database
+      return createDocument(
+        aiResponse.thought.title,
+        vars.content, // save original markdown
+        aiResponse.thought.category
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
@@ -60,9 +68,7 @@ export default function DailyLogContent() {
     if (!hasContent || mutation.isPending) return;
 
     const markdown = await editor.blocksToMarkdownLossy(editor.document);
-    const title = markdown.split("\n")[0].substring(0, 40) || "Brain Dump";
-
-    mutation.mutate({ title, content: markdown });
+    mutation.mutate({ content: markdown });
   }, [hasContent, editor, mutation]);
 
   return (

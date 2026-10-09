@@ -75,13 +75,14 @@ export async function createDocument(
   content_markdown: string,
   category: string = "Uncategorized"
 ): Promise<Document> {
-  const url = new URL(`${API_BASE}/api/documents`);
-  url.searchParams.append("title", title);
-  url.searchParams.append("content_markdown", content_markdown);
-  url.searchParams.append("category", category);
-
-  const res = await fetch(url.toString(), {
+  const res = await fetch(`${API_BASE}/api/documents/`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title,
+      content_markdown,
+      category,
+    }),
   });
   if (!res.ok) throw new Error(`Creating document failed: ${res.status}`);
   return res.json();

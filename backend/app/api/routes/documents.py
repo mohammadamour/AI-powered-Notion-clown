@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from typing import List
 
@@ -7,6 +8,11 @@ from app.models.domain import Document, Block, User
 from app.models.schemas import ProcessedThought
 
 router = APIRouter()
+
+class CreateDocumentRequest(BaseModel):
+    title: str
+    content_markdown: str
+    category: str = "Uncategorized"
 
 # For now, we mock a default user since we don't have auth yet
 def get_current_user(session: Session = Depends(get_session)) -> User:
@@ -33,14 +39,12 @@ def list_documents(
 
 @router.post("/", response_model=Document)
 def create_document(
-    title: str,
-    content_markdown: str,
-    category: str = "Uncategorized",
+    req: CreateDocumentRequest,
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user)
 ):
     """Create a new document with an initial block."""
-    doc = Document(title=title, category=category, owner_id=user.id)
+    doc = Document(title=req.title, category=req.category, owner_id=user.id)
     session.add(doc)
     session.commit()
     session.refresh(doc)
@@ -49,7 +53,7 @@ def create_document(
     block = Block(
         id=f"blk_{doc.id}_1",
         type="markdown",
-        content=content_markdown,
+        content=req.content_markdown,
         order_index=0,
         document_id=doc.id
     )
