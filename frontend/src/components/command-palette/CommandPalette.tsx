@@ -42,11 +42,26 @@ export default function CommandPalette({
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
-      setQuery("");
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => {
+        setQuery("");
+        setSelectedIndex(0);
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  const executeAction = useCallback(
+    (action: (typeof COMMAND_PALETTE_ACTIONS)[number]) => {
+      onClose();
+      if (action.id === "quick-capture") {
+        onQuickCapture();
+      } else if (action.path) {
+        router.push(action.path);
+      }
+    },
+    [onClose, onQuickCapture, router]
+  );
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
@@ -65,19 +80,7 @@ export default function CommandPalette({
         if (action) executeAction(action);
       }
     },
-    [filtered, selectedIndex, onClose]
-  );
-
-  const executeAction = useCallback(
-    (action: (typeof COMMAND_PALETTE_ACTIONS)[number]) => {
-      onClose();
-      if (action.id === "quick-capture") {
-        onQuickCapture();
-      } else if (action.path) {
-        router.push(action.path);
-      }
-    },
-    [onClose, onQuickCapture, router]
+    [filtered, selectedIndex, onClose, executeAction]
   );
 
   if (!isOpen) return null;

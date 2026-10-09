@@ -45,14 +45,17 @@ export default function DailyLogPage() {
   const [today, setToday] = useState("");
 
   useEffect(() => {
-    setToday(
-      new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    );
+    const timer = setTimeout(() => {
+      setToday(
+        new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      );
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubmit = useCallback(() => {
