@@ -83,6 +83,7 @@ def _mock_process(content: str) -> ProcessedThought:
         category=category,
         action_items=action_items[:5],  # cap at 5
         connections=[f"Related to your {category} notes"],
+        aesthetic_markdown=f"### ✨ {title}\n\n> {summary}\n\n**Tags:** {', '.join(['#' + t for t in tags])}\n\n*This is a beautifully formatted mock response.*",
     )
 
 
@@ -109,7 +110,8 @@ The JSON schema must be exactly this:
   "tags": ["array", "of", "up", "to", "4", "relevant", "tags"],
   "category": "One overarching category (e.g. Coding, Fitness, Philosophy, Work, Personal, etc)",
   "action_items": ["Array of extracted action items", "Or empty if none"],
-  "connections": ["1 or 2 ideas on how this thought might connect to other concepts"]
+  "connections": ["1 or 2 ideas on how this thought might connect to other concepts"],
+  "aesthetic_markdown": "A beautifully formatted markdown version of the user's content. Re-write or restructure the content to read like a premium Notion template. Use rich formatting: headings (###), blockquotes (>), bolding, italics, bullet points, and even emojis to make it look highly aesthetic and engaging, rather than just plain text. Make sure to include the action items and summary within this aesthetic markdown nicely."
 }}
 
 Here is the user's brain dump:

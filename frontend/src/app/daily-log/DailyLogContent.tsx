@@ -41,7 +41,7 @@ export default function DailyLogContent() {
       const markdown = await editor.blocksToMarkdownLossy(selection.blocks);
       const aiResponse = await processBrainDump(markdown);
       
-      const structuredContent = `### ✨ ${aiResponse.thought.title}
+      const structuredContent = aiResponse.thought.aesthetic_markdown || `### ✨ ${aiResponse.thought.title}
 **Summary:** ${aiResponse.thought.summary}
 
 **Action Items:**

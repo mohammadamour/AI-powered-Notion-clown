@@ -45,6 +45,7 @@ class ProcessedThought(BaseModel):
     category: str = Field(..., description="Suggested Mind Tree branch", examples=["Coding", "Fitness", "Philosophy", "Business", "Personal"])
     action_items: List[str] = Field(default_factory=list, description="Extracted to-do items, if any")
     connections: List[str] = Field(default_factory=list, description="Suggested connections to other topics")
+    aesthetic_markdown: Optional[str] = Field(default=None, description="A beautiful, richly formatted markdown version of the thought")
 
 
 class ProcessResponse(BaseModel):

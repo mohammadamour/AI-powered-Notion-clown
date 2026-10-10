@@ -17,6 +17,7 @@ export interface ProcessedThought {
   category: string;
   action_items: string[];
   connections: string[];
+  aesthetic_markdown?: string;
 }
 
 export interface ProcessResponse {
