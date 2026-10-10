@@ -1,167 +1,156 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Send } from "lucide-react";
-import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
-import { MOODS } from "@/lib/constants";
+import { useState, useEffect } from "react";
+import { Sparkles, Save } from "lucide-react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
+import { 
+  FormattingToolbarController, 
+  FormattingToolbar,
+  getFormattingToolbarItems
+} from "@blocknote/react";
 import "@blocknote/mantine/style.css";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDocuments, createDocument, processBrainDump } from "@/lib/api";
+import { createDocument, processBrainDump } from "@/lib/api";
 
 export default function DailyLogContent() {
-  const queryClient = useQueryClient();
-  
-  const { data: documents = [], isLoading } = useQuery({
-    queryKey: ["documents"],
-    queryFn: getDocuments,
-  });
-  const [selectedMood, setSelectedMood] = useState<string | undefined>();
-  const [hasContent, setHasContent] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [today, setToday] = useState("");
 
   const editor = useCreateBlockNote();
 
-  const handleChange = useCallback(() => {
-    // Check if the editor has meaningful text (more than just an empty paragraph)
-    const blocks = editor.document;
-    const text = blocks.map((b) => ('content' in b ? b.content : "")).toString().trim();
-    setHasContent(blocks.length > 1 || text.length > 0);
-  }, [editor]);
-
-  const [today, setToday] = useState("");
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setToday(
-        new Date().toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      );
-    }, 0);
-    return () => clearTimeout(timer);
+    setToday(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    );
   }, []);
 
-  const mutation = useMutation({
-    mutationFn: async (vars: { content: string }) => {
-      // 1. Send the raw thought to Gemini for structure
-      const aiResponse = await processBrainDump(vars.content);
+  const handleAIMagic = async () => {
+    const selection = editor.getSelection();
+    if (!selection || selection.blocks.length === 0) return;
+    
+    setIsAiLoading(true);
+    try {
+      const markdown = await editor.blocksToMarkdownLossy(selection.blocks);
+      const aiResponse = await processBrainDump(markdown);
       
-      const structuredContent = `## Summary
-${aiResponse.thought.summary}
+      const structuredContent = `### ✨ ${aiResponse.thought.title}
+**Summary:** ${aiResponse.thought.summary}
 
-## Action Items
-${aiResponse.thought.action_items && aiResponse.thought.action_items.length > 0 
-  ? aiResponse.thought.action_items.map((item: string) => `- [ ] ${item}`).join('\n') 
-  : "None"}
+**Action Items:**
+${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map((item: string) => `- [ ] ${item}`).join('\n') : "None"}
 
-## Tags
-${aiResponse.thought.tags ? aiResponse.thought.tags.map((tag: string) => `#${tag}`).join(', ') : ""}
+**Tags:** ${aiResponse.thought.tags?.map((tag: string) => `#${tag}`).join(', ')}
+`;
 
-## Category
-${aiResponse.thought.category}
-
----
-**Original Thought:**
-${vars.content}`;
-
-      // 2. Save the structure to our database
-      return createDocument(
-        aiResponse.thought.title,
-        structuredContent,
-        aiResponse.thought.category
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["documents"] });
-      editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
-      setHasContent(false);
-      setSelectedMood(undefined);
-    },
-    onError: (error: any) => {
-      alert(`Error processing your log: ${error.message || error}`);
+      const newBlocks = await editor.tryParseMarkdownToBlocks(structuredContent);
+      editor.replaceBlocks(selection.blocks, newBlocks);
+    } catch (e: any) {
+      alert(`AI failed: ${e.message}`);
+    } finally {
+      setIsAiLoading(false);
     }
-  });
+  };
 
-  const handleSubmit = useCallback(async () => {
-    if (!hasContent || mutation.isPending) return;
-
-    const markdown = await editor.blocksToMarkdownLossy(editor.document);
-    mutation.mutate({ content: markdown });
-  }, [hasContent, editor, mutation]);
+  const handleSaveDay = async () => {
+    setIsSaving(true);
+    try {
+      const markdown = await editor.blocksToMarkdownLossy(editor.document);
+      await createDocument(today, markdown, "Daily Log");
+      alert("Daily log saved successfully!");
+    } catch (e: any) {
+      alert(`Failed to save: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="daily-log-header">
-        <h1 className="daily-log-date">{today}</h1>
-        <p className="daily-log-subtitle">
-          Dump your thoughts below. No structure needed — just write.
-        </p>
-      </div>
-      {/* Input Section */}
-      <div className="daily-log-input-section" style={{ background: "var(--color-bg-secondary)", borderRadius: "var(--radius-md)", padding: "16px", border: "1px solid var(--color-surface-border)" }}>
-        <BlockNoteView editor={editor} theme="dark" onChange={handleChange} />
-
-        <div className="daily-log-controls" style={{ marginTop: "16px" }}>
-          {/* Mood Picker */}
-          <div className="mood-picker">
-            {MOODS.map(({ emoji, label }) => (
-              <button
-                key={emoji}
-                className={`mood-btn ${selectedMood === emoji ? "selected" : ""}`}
-                onClick={() =>
-                  setSelectedMood((prev) => (prev === emoji ? undefined : emoji))
-                }
-                title={label}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-
-          {/* Submit */}
-          <button
-            className="btn-primary"
-            onClick={handleSubmit}
-            disabled={!hasContent || mutation.isPending}
-            id="daily-log-submit"
-          >
-            <Send size={14} />
-            {mutation.isPending ? "Saving..." : "Log it"}
-          </button>
+    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "60px 20px", minHeight: "100vh" }}>
+      {/* Header Area */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: "1px solid var(--color-surface-border)", paddingBottom: "20px", marginBottom: "40px" }}>
+        <div>
+          <p style={{ color: "var(--color-text-tertiary)", fontWeight: 600, fontSize: "14px", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "8px" }}>
+            Daily Log
+          </p>
+          <h1 style={{ fontSize: "42px", fontWeight: 800, color: "var(--color-text-primary)", letterSpacing: "-1px" }}>
+            {today || "Loading..."}
+          </h1>
         </div>
+        
+        <button
+          onClick={handleSaveDay}
+          disabled={isSaving}
+          style={{
+            background: "var(--color-surface-hover)",
+            color: "var(--color-text-secondary)",
+            border: "1px solid var(--color-surface-border)",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: 600,
+            cursor: isSaving ? "wait" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            transition: "all 0.2s ease"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--color-bg-primary)";
+            e.currentTarget.style.color = "var(--color-text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "var(--color-surface-hover)";
+            e.currentTarget.style.color = "var(--color-text-secondary)";
+          }}
+        >
+          <Save size={16} />
+          {isSaving ? "Saving..." : "Save Page"}
+        </button>
       </div>
-
-      {/* Entries */}
-      {isLoading ? (
-        <p className="daily-log-subtitle" style={{ marginTop: "32px" }}>Loading entries...</p>
-      ) : documents.length > 0 ? (
-        <div className="daily-log-entries">
-          <h3 className="daily-log-entries-title">
-            Your Documents ({documents.length})
-          </h3>
-          {documents.map((doc) => {
-            const timeStr = new Date(doc.created_at).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            });
-            return (
-              <DailyLogEntry
-                key={doc.id}
-                content={`**${doc.title}**\n\n${doc.content}`}
-                time={timeStr}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <p className="daily-log-subtitle" style={{ marginTop: "32px" }}>No documents yet.</p>
-      )}
+      
+      {/* Full Page Editor */}
+      <div style={{ minHeight: "60vh", fontSize: "16px", padding: "0 10px" }}>
+        <BlockNoteView editor={editor} theme="dark" formattingToolbar={false}>
+          <FormattingToolbarController
+            formattingToolbar={() => (
+              <FormattingToolbar>
+                {getFormattingToolbarItems()}
+                
+                {/* Custom AI Button inserted into the default toolbar */}
+                <button
+                  onClick={handleAIMagic}
+                  disabled={isAiLoading}
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #d946ef)",
+                    color: "white",
+                    border: "none",
+                    padding: "4px 12px",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: isAiLoading ? "wait" : "pointer",
+                    marginLeft: "8px",
+                    marginRight: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 2px 10px rgba(217, 70, 239, 0.2)"
+                  }}
+                >
+                  <Sparkles size={14} />
+                  {isAiLoading ? "Structuring..." : "Summarize with AI"}
+                </button>
+              </FormattingToolbar>
+            )}
+          />
+        </BlockNoteView>
+      </div>
     </div>
   );
 }
