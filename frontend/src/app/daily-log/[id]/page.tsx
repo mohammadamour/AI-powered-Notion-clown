@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { use } from "react";
 
-const DailyLogEntryContent = dynamic(() => import("./DailyLogEntryContent"), {
+const DailyLogEntryContent = dynamic<{ id: string }>(() => import("./DailyLogEntryContent"), {
   ssr: false,
 });
 

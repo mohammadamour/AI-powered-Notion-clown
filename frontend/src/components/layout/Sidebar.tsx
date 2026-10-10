@@ -54,8 +54,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     setOpenFolders(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const dailyLogs = documents.filter(d => d.category === "Daily Log");
-  const grouped = dailyLogs.reduce((acc: any, doc) => {
+  const grouped = documents.reduce((acc: any, doc) => {
     const d = new Date(doc.created_at);
     const month = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const week = getWeekRangeStr(d);
