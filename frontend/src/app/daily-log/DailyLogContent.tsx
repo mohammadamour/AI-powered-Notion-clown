@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Save } from "lucide-react";
+import { Sparkles, Save, History, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { 
@@ -10,12 +10,34 @@ import {
   getFormattingToolbarItems
 } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
-import { createDocument, processBrainDump } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createDocument, processBrainDump, getDocuments } from "@/lib/api";
+import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
 
 export default function DailyLogContent() {
+  const queryClient = useQueryClient();
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [today, setToday] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ["documents"],
+    queryFn: getDocuments,
+  });
+
+  // Group documents by date
+  const groupedDocuments = documents.reduce((acc: any, doc: any) => {
+    const dateStr = new Date(doc.created_at).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!acc[dateStr]) acc[dateStr] = [];
+    acc[dateStr].push(doc);
+    return acc;
+  }, {});
 
   const editor = useCreateBlockNote();
 
@@ -62,6 +84,7 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
     try {
       const markdown = await editor.blocksToMarkdownLossy(editor.document);
       await createDocument(today, markdown, "Daily Log");
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
       alert("Daily log saved successfully!");
     } catch (e: any) {
       alert(`Failed to save: ${e.message}`);
@@ -150,6 +173,67 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
             )}
           />
         </BlockNoteView>
+      </div>
+
+      {/* History Section */}
+      <div style={{ marginTop: "80px", borderTop: "1px solid var(--color-surface-border)", paddingTop: "40px" }}>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--color-text-secondary)",
+            fontSize: "16px",
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 0",
+            marginBottom: showHistory ? "24px" : "0",
+            transition: "color 0.2s ease"
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-primary)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+        >
+          <History size={18} />
+          Previous Logs
+          {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+
+        {showHistory && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+            {isLoading ? (
+              <p style={{ color: "var(--color-text-muted)" }}>Loading history...</p>
+            ) : Object.keys(groupedDocuments).length === 0 ? (
+              <p style={{ color: "var(--color-text-muted)" }}>No previous logs found.</p>
+            ) : (
+              Object.entries(groupedDocuments).map(([date, docs]: [string, any]) => (
+                <div key={date}>
+                  <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>
+                    {date}
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {docs.map((doc: any) => {
+                      const timeStr = new Date(doc.created_at).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      });
+                      return (
+                        <DailyLogEntry
+                          key={doc.id}
+                          content={`**${doc.title}**\n\n${doc.content}`}
+                          time={timeStr}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
