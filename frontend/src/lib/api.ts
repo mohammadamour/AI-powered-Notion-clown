@@ -71,6 +71,15 @@ export async function getDocuments(): Promise<Document[]> {
   return res.json();
 }
 
+export async function getDocument(id: number | string): Promise<Document> {
+  // Since we don't have a GET /id endpoint yet, we'll fetch all and find it
+  // (In a real app, you'd add the endpoint in FastAPI)
+  const docs = await getDocuments();
+  const doc = docs.find((d) => String(d.id) === String(id));
+  if (!doc) throw new Error("Document not found");
+  return doc;
+}
+
 export async function createDocument(
   title: string,
   content_markdown: string,
