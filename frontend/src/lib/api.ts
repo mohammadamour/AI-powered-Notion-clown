@@ -105,3 +105,17 @@ export async function deleteDocument(id: number | string): Promise<void> {
   });
   if (!res.ok) throw new Error(`Deleting document failed: ${res.status}`);
 }
+
+export async function updateDocument(
+  id: number | string,
+  title: string,
+  content_markdown: string
+): Promise<Document> {
+  const res = await fetch(`${API_BASE}/api/documents/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, content_markdown }),
+  });
+  if (!res.ok) throw new Error(`Updating document failed: ${res.status}`);
+  return res.json();
+}

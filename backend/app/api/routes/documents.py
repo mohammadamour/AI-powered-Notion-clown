@@ -106,3 +106,54 @@ def delete_document(
 
     session.delete(doc)
     session.commit()
+
+class UpdateDocumentRequest(BaseModel):
+    title: str
+    content_markdown: str
+
+@router.put("/{doc_id}", response_model=DocumentResponse)
+def update_document(
+    doc_id: int,
+    req: UpdateDocumentRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user)
+):
+    """Update a document's title and content."""
+    doc = session.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    doc.title = req.title
+    session.add(doc)
+
+    # Update (or create) the first block
+    block = session.exec(
+        select(Block).where(Block.document_id == doc_id).order_by(Block.order_index)
+    ).first()
+
+    if block:
+        block.content = req.content_markdown
+        session.add(block)
+    else:
+        block = Block(
+            id=f"blk_{doc_id}_1",
+            type="markdown",
+            content=req.content_markdown,
+            order_index=0,
+            document_id=doc_id
+        )
+        session.add(block)
+
+    session.commit()
+    session.refresh(doc)
+
+    return DocumentResponse(
+        id=doc.id,
+        title=doc.title,
+        category=doc.category or "Uncategorized",
+        created_at=doc.created_at.isoformat() if doc.created_at else None,
+        updated_at=doc.updated_at.isoformat() if doc.updated_at else None,
+        content=req.content_markdown
+    )
