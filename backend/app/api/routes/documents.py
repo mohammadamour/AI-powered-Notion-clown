@@ -85,3 +85,24 @@ def create_document(
     session.refresh(doc)
     
     return doc
+
+@router.delete("/{doc_id}", status_code=204)
+def delete_document(
+    doc_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user)
+):
+    """Delete a document and its blocks by ID."""
+    doc = session.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Delete associated blocks first (FK constraint)
+    blocks = session.exec(select(Block).where(Block.document_id == doc_id)).all()
+    for block in blocks:
+        session.delete(block)
+
+    session.delete(doc)
+    session.commit()

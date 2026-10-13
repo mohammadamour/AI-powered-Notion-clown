@@ -98,3 +98,10 @@ export async function createDocument(
   if (!res.ok) throw new Error(`Creating document failed: ${res.status}`);
   return res.json();
 }
+
+export async function deleteDocument(id: number | string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/documents/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(`Deleting document failed: ${res.status}`);
+}

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, ExternalLink, Calendar } from "lucide-react";
-import { Document } from "@/lib/api";
+import { ChevronDown, ExternalLink, Calendar, Trash2 } from "lucide-react";
+import { Document, deleteDocument } from "@/lib/api";
+import { useToast } from "@/components/toast/ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DailyLogEntryProps {
   doc: Document;
@@ -12,6 +14,10 @@ interface DailyLogEntryProps {
 
 export default function DailyLogEntry({ doc, defaultOpen = false }: DailyLogEntryProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const dateStr = new Date(doc.created_at).toLocaleDateString("en-US", {
     weekday: "long",
@@ -24,6 +30,26 @@ export default function DailyLogEntry({ doc, defaultOpen = false }: DailyLogEntr
   const preview = doc.content
     ? doc.content.replace(/[#*`_>\[\]]/g, "").trim().slice(0, 160)
     : "No content";
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      // Auto-cancel confirmation after 3s
+      setTimeout(() => setConfirmDelete(false), 3000);
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteDocument(doc.id);
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      toast("Entry deleted", "success");
+    } catch (e: any) {
+      toast(`Failed to delete: ${e.message}`, "error");
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   return (
     <div
@@ -94,6 +120,32 @@ export default function DailyLogEntry({ doc, defaultOpen = false }: DailyLogEntr
         >
           <ExternalLink size={14} />
         </Link>
+
+        {/* Delete button */}
+        <button
+          id={`delete-entry-${doc.id}`}
+          onClick={handleDelete}
+          disabled={isDeleting}
+          title={confirmDelete ? "Click again to confirm" : "Delete entry"}
+          style={{
+            background: confirmDelete ? "rgba(248,113,113,0.15)" : "none",
+            border: confirmDelete ? "1px solid rgba(248,113,113,0.4)" : "1px solid transparent",
+            borderRadius: "var(--radius-sm)",
+            cursor: isDeleting ? "wait" : "pointer",
+            color: confirmDelete ? "#f87171" : "var(--color-text-muted)",
+            padding: "3px 7px",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "11px",
+            fontWeight: 600,
+            transition: "all var(--transition-fast)",
+          }}
+        >
+          <Trash2 size={13} />
+          {confirmDelete && <span>Sure?</span>}
+        </button>
       </button>
 
       {/* Expandable content */}
