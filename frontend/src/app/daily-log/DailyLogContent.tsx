@@ -32,6 +32,19 @@ export default function DailyLogContent() {
     .filter((d) => d.category === "Daily Log")
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  // Ctrl+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSaveDay();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSaving]);
+
   useEffect(() => {
     setToday(
       new Date().toLocaleDateString("en-US", {
@@ -124,7 +137,12 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
           }}
         >
           <Save size={16} />
-          {isSaving ? "Saving..." : "Save Page"}
+          {isSaving ? "Saving..." : (
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              Save Page
+              <span style={{ fontSize: "11px", opacity: 0.55, fontWeight: 500, letterSpacing: "0.02em" }}>Ctrl+S</span>
+            </span>
+          )}
         </button>
       </div>
       
