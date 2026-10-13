@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import dynamic from "next/dynamic";
 import { Focus, ZoomIn } from "lucide-react";
 
@@ -10,17 +11,19 @@ const MindTreeCanvas = dynamic(
 );
 
 export default function MindTreePage() {
+  const fitViewRef = useRef<(() => void) | null>(null);
+  const zoomInRef = useRef<(() => void) | null>(null);
   return (
     <div className="mind-tree-page">
       {/* Toolbar */}
       <div className="mind-tree-toolbar">
         <h2>🧠 Mind Tree</h2>
         <div className="mind-tree-toolbar-actions">
-          <button className="btn-secondary" id="mind-tree-fit-view">
+          <button className="btn-secondary" id="mind-tree-fit-view" onClick={() => fitViewRef.current?.()}>
             <Focus size={14} />
             Fit View
           </button>
-          <button className="btn-secondary" id="mind-tree-zoom-in">
+          <button className="btn-secondary" id="mind-tree-zoom-in" onClick={() => zoomInRef.current?.()}>
             <ZoomIn size={14} />
             Zoom In
           </button>
@@ -28,7 +31,7 @@ export default function MindTreePage() {
       </div>
 
       {/* Canvas */}
-      <MindTreeCanvas />
+      <MindTreeCanvas fitViewRef={fitViewRef} zoomInRef={zoomInRef} />
     </div>
   );
 }

@@ -1490,3 +1490,142 @@ a:hover {
   from { transform: scaleX(1); }
   to   { transform: scaleX(0); }
 }
+
+/* ─── Mind Tree ──────────────────────────────────────────────────── */
+.mind-tree-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
+}
+
+.mind-tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--color-surface-border);
+  background: rgba(9, 9, 11, 0.6);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.mind-tree-toolbar h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.mind-tree-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mind-tree-canvas {
+  flex: 1;
+  background: var(--color-bg-primary);
+}
+
+/* Override React Flow background */
+.mind-tree-canvas .react-flow__background {
+  background: var(--color-bg-primary);
+}
+
+/* ── Custom Nodes ── */
+.mind-tree-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  backdrop-filter: blur(8px);
+}
+
+.mind-tree-node:hover {
+  transform: scale(1.05);
+}
+
+.mind-tree-node.root {
+  padding: 18px 32px;
+  font-size: 16px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(99,102,241,0.2));
+  border-color: rgba(139, 92, 246, 0.6);
+  color: #c4b5fd;
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.2), 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.mind-tree-node.root:hover {
+  box-shadow: 0 0 48px rgba(139, 92, 246, 0.35), 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.mind-tree-node.branch {
+  padding: 12px 22px;
+  font-size: 14px;
+  background: rgba(24, 24, 27, 0.85);
+  border-color: rgba(63, 63, 70, 0.7);
+  color: var(--color-text-primary);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.mind-tree-node.branch:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15), 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.mind-tree-node.leaf {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(18, 18, 22, 0.8);
+  border-color: rgba(63, 63, 70, 0.4);
+  color: var(--color-text-secondary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.mind-tree-node.leaf:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  color: var(--color-text-primary);
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.1), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.mind-tree-node.doc-leaf {
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #6ee7b7;
+}
+
+.mind-tree-node.doc-leaf:hover {
+  border-color: rgba(52, 211, 153, 0.7);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.15);
+}
+
+.mind-tree-node-label {
+  white-space: nowrap;
+}
+
+/* React Flow controls dark mode */
+.react-flow__controls {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-surface-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-color: var(--color-surface-border) !important;
+  color: var(--color-text-muted) !important;
+  fill: var(--color-text-muted) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--color-bg-hover) !important;
+  fill: var(--color-text-primary) !important;
+}
