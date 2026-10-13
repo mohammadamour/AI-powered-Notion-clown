@@ -13,9 +13,11 @@ import "@blocknote/mantine/style.css";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { createDocument, processBrainDump, getDocuments } from "@/lib/api";
 import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
+import { useToast } from "@/components/toast/ToastProvider";
 
 export default function DailyLogContent() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [today, setToday] = useState("");
@@ -77,7 +79,7 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
       const newBlocks = await editor.tryParseMarkdownToBlocks(structuredContent);
       editor.replaceBlocks(selection.blocks, newBlocks);
     } catch (e: any) {
-      alert(`AI failed: ${e.message}`);
+      toast(`AI failed: ${e.message}`, "error");
     } finally {
       setIsAiLoading(false);
     }
@@ -89,9 +91,9 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
       const markdown = await editor.blocksToMarkdownLossy(editor.document);
       await createDocument(today, markdown, "Daily Log");
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      alert("Daily log saved successfully!");
+      toast("Daily log saved! ✓", "success");
     } catch (e: any) {
-      alert(`Failed to save: ${e.message}`);
+      toast(`Failed to save: ${e.message}`, "error");
     } finally {
       setIsSaving(false);
     }
