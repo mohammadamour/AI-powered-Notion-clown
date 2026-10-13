@@ -44,7 +44,15 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  // Auto-open current month + week on mount
+  const now = new Date();
+  const currentMonth = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const currentWeek = getWeekRangeStr(now);
+
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
+    [currentMonth]: true,
+    [currentMonth + currentWeek]: true,
+  });
 
   const { data: documents = [] } = useQuery({ queryKey: ["documents"], queryFn: getDocuments });
 
@@ -54,11 +62,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     setOpenFolders(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const grouped = documents.reduce((acc: any, doc) => {
+  // Only show Daily Log category docs
+  const dailyLogDocs = documents.filter((d) => d.category === "Daily Log");
+
+  const grouped = dailyLogDocs.reduce((acc: any, doc) => {
     const d = new Date(doc.created_at);
-    const month = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const month = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const week = getWeekRangeStr(d);
-    
+
     if (!acc[month]) acc[month] = {};
     if (!acc[month][week]) acc[month][week] = [];
     acc[month][week].push(doc);
@@ -108,29 +119,39 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               </Link>
               
               {isDailyLog && !collapsed && Object.keys(grouped).length > 0 && (
-                <div className="sidebar-nested-list" style={{ paddingLeft: '24px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div className="sidebar-nested-list">
                   {Object.entries(grouped).map(([month, weeks]) => (
                     <div key={month}>
-                      <div onClick={(e) => toggleFolder(month, e)} style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px 0' }}>
-                        {openFolders[month] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        <span style={{ marginLeft: '4px', fontWeight: 600 }}>{month}</span>
+                      {/* Month row */}
+                      <div className="sidebar-folder-row" onClick={(e) => toggleFolder(month, e)}>
+                        {openFolders[month] ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        <span className="sidebar-folder-label">{month}</span>
                       </div>
-                      
+
                       {openFolders[month] && Object.entries(weeks as any).map(([week, docs]: any) => (
-                        <div key={month+week} style={{ paddingLeft: '12px' }}>
-                          <div onClick={(e) => toggleFolder(month+week, e)} style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: 'var(--color-text-tertiary)', cursor: 'pointer', padding: '4px 0' }}>
-                            {openFolders[month+week] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                            <span style={{ marginLeft: '4px' }}>{week}</span>
+                        <div key={month + week} style={{ paddingLeft: '12px' }}>
+                          {/* Week row */}
+                          <div className="sidebar-folder-row sidebar-week-row" onClick={(e) => toggleFolder(month + week, e)}>
+                            {openFolders[month + week] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                            <span className="sidebar-folder-label sidebar-week-label">{week}</span>
                           </div>
-                          
-                          {openFolders[month+week] && docs.map((doc: any) => (
-                            <Link href={`/daily-log/${doc.id}`} key={doc.id} className={`nav-item ${pathname === '/daily-log/' + doc.id ? 'active' : ''}`} style={{ padding: '4px 8px', fontSize: '12px', marginLeft: '12px', width: 'calc(100% - 12px)', minHeight: 'auto', background: pathname === '/daily-log/' + doc.id ? 'var(--color-bg-hover)' : 'transparent' }}>
-                              <FileText size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {doc.title || new Date(doc.created_at).toLocaleDateString()}
-                              </span>
-                            </Link>
-                          ))}
+
+                          {/* Doc links */}
+                          {openFolders[month + week] && docs.map((doc: any) => {
+                            const docActive = pathname === `/daily-log/${doc.id}`;
+                            return (
+                              <Link
+                                href={`/daily-log/${doc.id}`}
+                                key={doc.id}
+                                className={`nav-item sidebar-doc-link ${docActive ? 'active' : ''}`}
+                              >
+                                <FileText size={12} style={{ flexShrink: 0 }} />
+                                <span className="sidebar-doc-title">
+                                  {doc.title || new Date(doc.created_at).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </span>
+                              </Link>
+                            );
+                          })}
                         </div>
                       ))}
                     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Save } from "lucide-react";
+import { Sparkles, Save, ChevronDown } from "lucide-react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { 
@@ -10,8 +10,9 @@ import {
   getFormattingToolbarItems
 } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
-import { useQueryClient } from "@tanstack/react-query";
-import { createDocument, processBrainDump } from "@/lib/api";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { createDocument, processBrainDump, getDocuments } from "@/lib/api";
+import DailyLogEntry from "@/components/daily-log/DailyLogEntry";
 
 export default function DailyLogContent() {
   const queryClient = useQueryClient();
@@ -20,6 +21,16 @@ export default function DailyLogContent() {
   const [today, setToday] = useState("");
 
   const editor = useCreateBlockNote();
+
+  // Fetch past Daily Log documents
+  const { data: documents = [] } = useQuery({
+    queryKey: ["documents"],
+    queryFn: getDocuments,
+  });
+
+  const pastEntries = documents
+    .filter((d) => d.category === "Daily Log")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   useEffect(() => {
     setToday(
@@ -154,6 +165,34 @@ ${aiResponse.thought.action_items?.length ? aiResponse.thought.action_items.map(
           />
         </BlockNoteView>
       </div>
+      {/* ── Past Entries ───────────────────────────────────────────── */}
+      {pastEntries.length > 0 && (
+        <div style={{ marginTop: "64px" }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "24px",
+          }}>
+            <div style={{ flex: 1, height: "1px", background: "var(--color-surface-border)" }} />
+            <span style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--color-text-muted)",
+              whiteSpace: "nowrap",
+            }}>
+              Past Entries
+            </span>
+            <div style={{ flex: 1, height: "1px", background: "var(--color-surface-border)" }} />
+          </div>
+
+          {pastEntries.map((doc) => (
+            <DailyLogEntry key={doc.id} doc={doc} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
